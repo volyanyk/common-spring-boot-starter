@@ -1,0 +1,16 @@
+spring:
+  rabbitmq:
+    host: ${RABBIT_HOST:localhost}
+    port: 5672
+    username: ${RABBIT_USER:guest}
+    password: ${RABBIT_PASS:guest}
+  cloud:
+    stream:
+      # Explicitly bind to Rabbit if profile is active (Cloud Stream auto-detects, but explicit controls helpful)
+      default-binder: rabbit
+      bindings:
+        producer-out-0:
+          destination: event-exchange
+        consumer-in-0:
+          destination: event-exchange
+          group: ${spring.application.name}-queue

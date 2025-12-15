@@ -1,0 +1,10 @@
+spring:
+  datasource:
+    url: jdbc:db2://${DB_HOST:localhost}:50000/${DB_NAME:starterdb}
+    username: ${DB_USER:db2inst1}
+    password: ${DB_PASS:password}
+    driver-class-name: com.ibm.db2.jcc.DB2Driver
+  jpa:
+    database-platform: org.hibernate.dialect.DB2Dialect
+    hibernate:
+      ddl-auto: update

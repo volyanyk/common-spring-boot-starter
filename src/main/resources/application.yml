@@ -1,0 +1,27 @@
+spring:
+  application:
+    name: microservice-starter
+  profiles:
+    # Default stack: Postgres + Redis + Kafka
+    # Override via env: SPRING_PROFILES_ACTIVE=mysql,redis,rabbitmq
+    active: postgres,redis,kafka
+
+# Global Resilience
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 5s
+
+# Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always

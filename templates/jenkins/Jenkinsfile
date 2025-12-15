@@ -1,0 +1,36 @@
+pipeline {
+    agent any
+
+    tools {
+        maven 'Maven 3'
+        jdk 'Java 21'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Build') {
+            steps {
+                sh 'mvn clean package -DskipTests'
+            }
+        }
+
+        stage('Test') {
+            steps {
+                sh 'mvn test'
+            }
+        }
+
+        stage('Docker Build & Push') {
+            steps {
+                script {
+                    docker.build("my-registry/microservice-starter:${env.BUILD_NUMBER}").push()
+                }
+            }
+        }
+    }
+}
