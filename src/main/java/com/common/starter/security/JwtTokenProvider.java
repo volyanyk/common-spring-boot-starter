@@ -1,18 +1,25 @@
 package com.common.starter.security;
 
+import com.common.starter.security.abstraction.TokenProvider;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
-import java.util.function.Function;
+import java.util.Map;
 
+/**
+ * JWT implementation of TokenProvider.
+ * Provides JWT-based token generation, validation, and extraction.
+ */
 @Component
-public class JwtTokenProvider {
+@Primary
+public class JwtTokenProvider implements TokenProvider<Claims> {
 
     @Value("${jwt.secret:defaultSecretKeyWithEnoughEntropyToMakeItWork12345!}")
     private String secret;
@@ -24,16 +31,34 @@ public class JwtTokenProvider {
         return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
 
-    public String extractUsername(String token) {
-        return extractClaim(token, Claims::getSubject);
+    @Override
+    public String generateToken(String subject, Map<String, Object> additionalClaims) {
+        return Jwts.builder()
+                .subject(subject)
+                .claims(additionalClaims)
+                .issuedAt(new Date(System.currentTimeMillis()))
+                .expiration(new Date(System.currentTimeMillis() + expiration))
+                .signWith(getSigningKey())
+                .compact();
     }
 
-    public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
-        final Claims claims = extractAllClaims(token);
-        return claimsResolver.apply(claims);
+    @Override
+    public boolean validateToken(String token) {
+        try {
+            extractClaims(token);
+            return !isTokenExpired(token);
+        } catch (Exception e) {
+            return false;
+        }
     }
 
-    private Claims extractAllClaims(String token) {
+    @Override
+    public String extractSubject(String token) {
+        return extractClaims(token).getSubject();
+    }
+
+    @Override
+    public Claims extractClaims(String token) {
         return Jwts.parser()
                 .verifyWith(getSigningKey())
                 .build()
@@ -41,22 +66,28 @@ public class JwtTokenProvider {
                 .getPayload();
     }
 
-    public boolean validateToken(String token) {
+    @Override
+    public boolean isTokenExpired(String token) {
         try {
-            extractAllClaims(token);
-            return true;
+            Date expiration = extractClaims(token).getExpiration();
+            return expiration.before(new Date());
         } catch (Exception e) {
-            return false;
+            return true;
         }
     }
 
-    // Example method to generate token (for tests or auth service)
+    @Override
+    public long getExpirationTime() {
+        return expiration;
+    }
+
+    // Legacy method for backward compatibility
+    public String extractUsername(String token) {
+        return extractSubject(token);
+    }
+
+    // Legacy method for backward compatibility
     public String generateToken(String username) {
-        return Jwts.builder()
-                .subject(username)
-                .issuedAt(new Date(System.currentTimeMillis()))
-                .expiration(new Date(System.currentTimeMillis() + expiration))
-                .signWith(getSigningKey())
-                .compact();
+        return generateToken(username, Map.of());
     }
 }
